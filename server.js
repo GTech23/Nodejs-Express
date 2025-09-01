@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import cookieParser from "cookie-parser";
 
 import { auth } from "./middlewares/auth.js";
 
@@ -13,6 +14,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 // fake database
 const users = [];
@@ -47,7 +49,10 @@ app.post("/login", async (req, res) => {
     const token = jwt.sign({ username }, "FuckingSecretKey", {
       expiresIn: "1hr",
     });
-    console.log(token);
+    res.cookie("token", token, {
+      sameSite: "strict",
+      httpOnly: true,
+    });
     res.status(200).json({ message: `User logged in successfully`, token });
   } catch (e) {
     console.error(e);
