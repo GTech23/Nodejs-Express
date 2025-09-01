@@ -5,6 +5,8 @@ import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+import { auth } from "./middlewares/auth.js";
+
 const PORT = process.env.PORT || 3000;
 
 const app = express();
@@ -54,28 +56,10 @@ app.post("/login", async (req, res) => {
 });
 
 // protected route
-app.get("/dashboard", (req, res) => {
-  const header = req.headers["authorization"];
-  const token = header.split(" ")[1];
-  if (!header && !token)
-    return res
-      .status(401)
-      .json({ message: "Access denied. No token provided" });
-  try {
-    const decode = jwt.verify(token, "FuckingSecretKey");
-    console.log(decode);
-    res
-      .status(200)
-      .json({ message: `Welcome to your dashboard ${decode.username}` });
-  } catch (err) {
-    if (err.name === "JsonWebTokenError") {
-      res.status(401).json({ message: `Access denied. Invalid token` });
-    } else if (err.name === "TokenExpiredError") {
-      res.status(401).json({ message: `Access denied. Token expired` });
-    } else {
-      res.status(500).json({ message: `Internal Server Error` });
-    }
-  }
+app.get("/dashboard", auth, (req, res) => {
+  res
+    .status(200)
+    .json({ message: `Welcome to your dashboard ${req.user?.username}` });
 });
 
 app.listen(PORT, () => {
