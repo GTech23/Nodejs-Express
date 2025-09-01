@@ -18,7 +18,7 @@ const users = [];
 // register endpoint
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-  const hashPassword = await bcrypt.hash(password, 15);
+  const hashPassword = await bcrypt.hash(password, 10);
 
   users.push({ username, hashPassword });
   console.log(users);
