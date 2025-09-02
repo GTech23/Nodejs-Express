@@ -1,4 +1,4 @@
-// 3. JSON Web Token
+// 4. ROLE BASED AUTHENTICATIONS
 
 import express from "express";
 import cors from "cors";
@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 
-import { auth } from "./middlewares/auth.js";
+import { auth, authorize } from "./middlewares/auth.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -17,56 +17,57 @@ app.use(express.json());
 app.use(cookieParser());
 
 // fake database
-const users = [];
-
-// register endpoint
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-  const hashPassword = await bcrypt.hash(password, 10);
-
-  users.push({ username, hashPassword });
-  console.log(users);
-  res.json({ message: `User registered successfully` });
-});
+const users = [
+  {
+    username: "gtech23",
+    password: bcrypt.hashSync("test123", 10),
+    role: "admin",
+  },
+  {
+    username: "pious3",
+    password: bcrypt.hashSync("test123", 10),
+    role: "user",
+  },
+];
 
 // login endpoint
 app.post("/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
-    console.log(username, password);
+    const { username, password, role } = req.body;
 
     const findUser = users.find((user) => user.username === username);
-    console.log(findUser);
+
     if (!findUser)
-      return res.status(401).json({ message: `Invalid username or password` });
+      return res.status(401).json({ message: "Invalid username or password" });
 
     // verify hash
-    const isValid = await bcrypt.compare(password, findUser.hashPassword);
-    console.log(isValid);
-    if (!isValid)
-      return res.status(401).json({ message: `Incorrect Password` });
+    const isValid = await bcrypt.compare(password, findUser.password);
 
-    const token = jwt.sign({ username }, "FuckingSecretKey", {
-      expiresIn: "1hr",
+    if (!isValid) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+    const token = jwt.sign({ username, role }, "myFuckingSecret", {
+      expiresIn: "1h",
     });
     res.cookie("token", token, {
       sameSite: "strict",
       httpOnly: true,
     });
-    res.status(200).json({ message: `User logged in successfully`, token });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: `Internal Server Error` });
+    res.json({ message: "Login successful ✅" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// protected route
 app.get("/dashboard", auth, (req, res) => {
-  res
-    .status(200)
-    .json({ message: `Welcome to your dashboard ${req.user?.username}` });
+  res.json(`Welcome to your dashboard ${req.user.username}`);
 });
 
+// protected route
+app.get("/admin", auth, authorize(["admin"]), (req, res) => {
+  res.json(`Welcome back admin, ${req.user.username}`);
+});
 app.listen(PORT, () => {
   console.log(`Server connected to PORT ${PORT}`);
 });
